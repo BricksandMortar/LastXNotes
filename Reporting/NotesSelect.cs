@@ -140,7 +140,7 @@ namespace Rock.Reporting.DataSelect.Person
             var qryPersonNotes = new PersonService( context ).Queryable().
                 Select( p => qryNotes
                     .Where( reducedNote => reducedNote.EntityId == p.Id )
-                    .OrderBy( o => o.CreatedDateTime )
+                    .OrderByDescending( o => o.CreatedDateTime )
                     .Select( s => s.Text )
                     .Take(numberOfNotes)
                     .AsEnumerable() 
