@@ -17,10 +17,10 @@ namespace Rock.Reporting.DataSelect.Person
     /// <summary>
     /// 
     /// </summary>
-    [Description( "Selects a Specific Number of Public Notes for a Person" )]
+    [Description( "Selects a Specific Number of Public Notes's Authors for a Person" )]
     [Export( typeof( DataSelectComponent ) )]
-    [ExportMetadata( "ComponentName", "Selects a Specific Number of Public Notes for a Person" )]
-    public class LastXNotesSelect : DataSelectComponent
+    [ExportMetadata( "ComponentName", "Selects a Specific Number of Public Notes's Authors for a Person" )]
+    public class LastXNotesAuthorsSelect : DataSelectComponent
     {
 
         #region Properties
@@ -50,7 +50,7 @@ namespace Rock.Reporting.DataSelect.Person
         {
             get
             {
-                return "Last Notes";
+                return "Last Notes' Authors";
             }
         }
 
@@ -75,7 +75,7 @@ namespace Rock.Reporting.DataSelect.Person
         {
             get
             {
-                return "Last x Notes";
+                return "Last x Notes' Authors";
             }
         }
 
@@ -93,7 +93,7 @@ namespace Rock.Reporting.DataSelect.Person
         /// </value>
         public override string GetTitle( Type entityType )
         {
-            return "Last x Notes";
+            return "Last x Notes' Author";
         }
 
         /// <summary>
@@ -124,28 +124,29 @@ namespace Rock.Reporting.DataSelect.Person
                 qryNotes = qryNotes.Where( n => n.NoteTypeId == noteTypeId.Value );
             }
 
-            //var notes = qryNotes
-            //    .GroupBy( n => n.EntityId )
-            //    .Where( g => g.Key != null )
-            //    .ToList()
-            //    .Select( grouping => new NoteCombined()
-            //    {
-            //        PersonId = grouping.Key.Value,
-            //        CombinedNotes = string.Join( Environment.NewLine, grouping
-            //         .OrderBy( o => o.CreatedDateTime )
-            //         .Take( numberOfNotes )
-            //         .Select( note => note.Text ) )
-            //    } );
+            //var personAliases = new PersonAliasService(context).Queryable()
+            //    .Where( pa => qryNotes.Any( q => q.CreatedByPersonAliasId == pa.Id) );
+
+            //var noteQuery = new PersonService( context ).Queryable()
+            //    .Select( p => personAliases.Where( s => s.PersonId == p.Id && s.GroupRole.Guid == childGuid )
+            //        .SelectMany( m => m.Group.Members )
+            //        .Where( m => m.GroupRole.Guid == adultGuid )
+            //        .Select( m => m.Person )
+            //        .Where( m => m.PhoneNumbers.Count( t => t.NumberTypeValueId == phoneNumberTypeValueId ) != 0 )
+            //        .Select( m => m.PhoneNumbers.FirstOrDefault( t => t.NumberTypeValueId == phoneNumberTypeValueId ) ).AsEnumerable() );
+
 
             var qryPersonNotes = new PersonService( context ).Queryable().
                 Select( p => qryNotes
-                    .Where( reducedNote => reducedNote.EntityId == p.Id )
+                    .Where( note => note.EntityId == p.Id )
                     .OrderByDescending( o => o.CreatedDateTime )
-                    .Select( s => s.Text )
-                    .Take(numberOfNotes)
-                    .AsEnumerable() 
+                    .Select( s => s.CreatedByPersonAlias )
+                    .Select( pa => pa.Person )
+                    .Select( person => person.NickName + " " + person.LastName )
+                    .Take( numberOfNotes )
+                    .AsEnumerable()
                 );
-            //var qryPersonNotes = new PersonService( context ).Queryable().Select( p => qryNotes.Where( reducedNote => reducedNote.EntityId == p.Id ).Select( s => s.Text ).FirstOrDefault() );
+
             var selectNoteExpression = SelectExpressionExtractor.Extract( qryPersonNotes, entityIdProperty, "p" );
 
             return selectNoteExpression;
@@ -162,11 +163,11 @@ namespace Rock.Reporting.DataSelect.Person
                     var sb = new StringBuilder();
                     for (int i = 0; i < noteList.Count(); i++ )
                     {
-                        sb.Append( "<strong>Note " );
+                        sb.Append( "<strong>Note ");
                         sb.Append( i + 1 );
-                        sb.Append( ":</strong> " );
-                        sb.Append( noteList.ElementAt( i ) );
-                        if ( i < noteList.Count() - 1 )
+                        sb.Append( " Author:</strong> " );
+                        sb.Append( noteList.ElementAt( i ));
+                        if (i < noteList.Count() - 1 )
                         {
                             sb.Append( ", " );
                         }
@@ -268,9 +269,12 @@ namespace Rock.Reporting.DataSelect.Person
 
         #endregion
 
-        internal class NoteCombined{
-            public int PersonId { get; set; }
-            public string CombinedNotes { get; set; }
+        internal class NoteGroup{
+            public int NotePersonId { get; set; }
+            public int NoteAuthorPersonId { get; set;}
+            public int? NoteAuthorPersonAliasId { get; set; }
+            public string NoteAuthorPersonName { get; set; }
+            public DateTime? NoteCreatedDateTime { get; set; }
         }
     }
 }
